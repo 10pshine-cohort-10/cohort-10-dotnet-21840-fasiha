@@ -1,0 +1,66 @@
+name: SonarQube
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+      SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY || 'taskline' }}
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: client/package-lock.json
+      - run: npm ci --prefix client
+
+      - name: Start a disposable SonarQube instance
+        if: env.SONAR_HOST_URL == ''
+        shell: bash
+        run: |
+          host=http://127.0.0.1:9000
+          docker run -d --name taskline-sonar -p 127.0.0.1:9000:9000 \
+            -e SONAR_ES_BOOTSTRAP_CHECKS_DISABLE=true sonarqube:community
+          ready=false
+          for attempt in {1..90}; do
+            if curl -fsS "$host/api/system/status" 2>/dev/null | jq -e '.status == "UP"' >/dev/null; then
+              ready=true
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" = false ]; then docker logs taskline-sonar; exit 1; fi
+
+          password="Sonar-$(openssl rand -hex 18)-Aa1!"
+          echo "::add-mask::$password"
+          curl -fsS -u admin:admin --data-urlencode login=admin --data-urlencode previousPassword=admin \
+            --data-urlencode "password=$password" "$host/api/users/change_password"
+          token=$(curl -fsS -u "admin:$password" --data-urlencode name=taskline-ci "$host/api/user_tokens/generate" | jq -er '.token')
+          echo "::add-mask::$token"
+          curl -fsS -H "Authorization: Bearer $token" --data-urlencode "project=$SONAR_PROJECT_KEY" \
+            --data-urlencode name=Taskline --data-urlencode mainBranch=main "$host/api/projects/create" >/dev/null
+          SONAR_HOST_URL="$host" SONAR_TOKEN="$token" node scripts/configure-sonar.mjs
+          {
+            echo "SONAR_HOST_URL=$host"
+            echo "SONAR_TOKEN=$token"
+          } >> "$GITHUB_ENV"
+
+      - name: Analyze C# and React and check the quality gate
+        shell: pwsh
+        run: ./scripts/scan-sonar.ps1
