@@ -1,13 +1,12 @@
 using Microsoft.AspNetCore.Http;
-using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using TaskManagement.Api.Data;
 using TaskManagement.Api.Tasks;
 
 namespace TaskManagement.Tests;
 
-public sealed class TaskServiceTests
+public sealed class TaskServiceTests(TaskApiFactory app) : IClassFixture<TaskApiFactory>
 {
     [Theory]
     [InlineData("creator", false, true)]
@@ -24,14 +23,11 @@ public sealed class TaskServiceTests
         Assert.Equal(expected, new TaskActor(userId, admin).CanManage(task));
     }
 
-    [Fact]
+    [SqlServerFact]
     public async Task StoreCombinesVisibilitySearchAndPagination()
     {
-        await using var connection = new SqliteConnection("Data Source=:memory:");
-        await connection.OpenAsync();
-        var options = new DbContextOptionsBuilder<AppDbContext>().UseSqlite(connection).Options;
-        await using var db = new AppDbContext(options);
-        await db.Database.EnsureCreatedAsync();
+        await using var scope = app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
 
         var admin = new AppUser { DisplayName = "Administrator" };
         var member = new AppUser { DisplayName = "Member" };

@@ -12,7 +12,7 @@ Taskline is a .NET full-stack project for the Cohort 10 assignment by Fasiha Tar
 
 Install the **.NET 10 SDK**, **Node.js 24**, and **SQL Server 2022 or later**. On Windows you can use SQL Server Express LocalDB. The development connection string already targets `(localdb)\MSSQLLocalDB` and creates a database named `FasihaTaskManagement`. [Microsoft LocalDB setup](https://learn.microsoft.com/en-us/sql/database-engine/configure-windows/sql-server-express-localdb)
 
-From the repository root in PowerShell, apply the migrations and start the API.
+From the repository root in PowerShell, apply the EF Core migrations and start the API. Run the same migration command when upgrading an existing database. The role upgrade preserves existing user assignments and the soft-deletion columns default to false for existing records.
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
@@ -37,7 +37,7 @@ For an HTTPS deployment, run `npm ci` and `npm run build` inside `client`. Serve
 
 ### Provision an administrator
 
-Public registration creates user accounts. Run this command after applying the database migrations, with a distinct email for the administrator. The command creates the account once and exits.
+Public registration assigns the `User` role. Run this command after applying the database migrations, with a distinct email for the administrator. The command creates the account with the `Admin` role once and exits.
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
@@ -86,7 +86,7 @@ Run the xUnit tests from the repository root.
 dotnet test TaskManagement.slnx
 ```
 
-The tests use isolated SQLite databases by default. To exercise the SQL Server migrations and the same API tests against SQL Server, set `TASKMANAGEMENT_TEST_SQL` to a SQL Server connection string with permission to create and drop disposable test databases. The suite generates a separate database name for each API test fixture. GitHub Actions builds React and runs the API tests with both providers.
+Set `TASKMANAGEMENT_TEST_SQL` to a SQL Server connection string with permission to create and drop disposable test databases to run the integration tests. Each fixture applies EF Core migrations to its own database. With no connection string, only the unit tests run. GitHub Actions builds React and runs the full suite with a disposable SQL Server instance.
 
 The SonarQube workflow analyzes C# and JavaScript/JSX, imports OpenCover coverage, and waits for the quality gate. By default it uses an isolated SonarQube Community Build instance on the runner. To keep analysis history on your own SonarQube instance, create a project there and set these repository variables and secret.
 

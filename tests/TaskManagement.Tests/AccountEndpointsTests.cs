@@ -10,7 +10,7 @@ namespace TaskManagement.Tests;
 
 public sealed class AccountEndpointsTests(TaskApiFactory app) : IClassFixture<TaskApiFactory>
 {
-    [Fact]
+    [SqlServerFact]
     public async Task RegistrationLoginProfileAndLogoutUseUserSessionAndCsrf()
     {
         const string email = "member@example.test";
@@ -46,7 +46,7 @@ public sealed class AccountEndpointsTests(TaskApiFactory app) : IClassFixture<Ta
         Assert.Equal(HttpStatusCode.Unauthorized, afterLogout.StatusCode);
     }
 
-    [Fact]
+    [SqlServerFact]
     public async Task AdminSoftDeletesUserAndRevokesTheirSessionWithoutHidingOwnedTasks()
     {
         const string email = "deactivate@example.test";

@@ -11,7 +11,7 @@ namespace TaskManagement.Tests;
 
 public sealed class TaskEndpointsTests(TaskApiFactory app) : IClassFixture<TaskApiFactory>
 {
-    [Fact]
+    [SqlServerFact]
     public async Task OwnerCanCreateFilterUpdateAndDelete()
     {
         using var client = await app.SignInNewUserAsync("owner@example.test", "Task Owner");
@@ -72,7 +72,7 @@ public sealed class TaskEndpointsTests(TaskApiFactory app) : IClassFixture<TaskA
         Assert.Equal("Publish sprint plan", retained.Title);
     }
 
-    [Fact]
+    [SqlServerFact]
     public async Task AdminCanDelegateAndAssigneeCanUpdateOnlyStatus()
     {
         using var admin = await app.SignInAdminAsync("admin@example.test");

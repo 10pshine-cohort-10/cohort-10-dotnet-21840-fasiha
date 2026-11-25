@@ -31,7 +31,7 @@ function TaskDetailCard({ initialTask, reload }) {
   }
 
   async function remove() {
-    if (!window.confirm('Delete this task permanently?')) return;
+    if (!window.confirm('Remove this task from the workspace?')) return;
     setSaving(true);
     setError(null);
     try {

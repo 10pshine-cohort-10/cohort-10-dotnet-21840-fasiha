@@ -3,13 +3,10 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.SqlClient;
-using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using TaskManagement.Api.Auth;
 using TaskManagement.Api.Data;
 
@@ -18,7 +15,6 @@ namespace TaskManagement.Tests;
 public sealed class TaskApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly string? sqlConnection = CreateSqlConnection();
-    private readonly SqliteConnection sqlite = new("Data Source=:memory:");
     private bool databaseReady;
 
     internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
@@ -29,32 +25,17 @@ public sealed class TaskApiFactory : WebApplicationFactory<Program>, IAsyncLifet
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
-        builder.ConfigureTestServices(services =>
-        {
-            services.RemoveAll<IDbContextOptionsConfiguration<AppDbContext>>();
-            services.RemoveAll<DbContextOptions<AppDbContext>>();
-            services.AddDbContext<AppDbContext>(options =>
-            {
-                if (sqlConnection is null)
-                    options.UseSqlite(sqlite);
-                else
-                    options.UseSqlServer(sqlConnection);
-            });
-        });
+        builder.ConfigureAppConfiguration(config => config.AddInMemoryCollection(
+            new Dictionary<string, string?> { ["ConnectionStrings:Tasks"] = sqlConnection }));
     }
 
     public async Task InitializeAsync()
     {
         if (sqlConnection is null)
-            await sqlite.OpenAsync();
+            return;
 
         await using var scope = Services.CreateAsyncScope();
-        var database = scope.ServiceProvider.GetRequiredService<AppDbContext>().Database;
-        if (sqlConnection is null)
-            await database.EnsureCreatedAsync();
-        else
-            await database.MigrateAsync();
-
+        await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
         databaseReady = true;
     }
 
@@ -62,8 +43,9 @@ public sealed class TaskApiFactory : WebApplicationFactory<Program>, IAsyncLifet
     {
         try
         {
-            if (databaseReady && sqlConnection is not null)
+            if (databaseReady)
             {
+                // This is a disposable database with a generated name for this test fixture.
                 await using var scope = Services.CreateAsyncScope();
                 await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.EnsureDeletedAsync();
             }
@@ -71,7 +53,6 @@ public sealed class TaskApiFactory : WebApplicationFactory<Program>, IAsyncLifet
         finally
         {
             await base.DisposeAsync();
-            await sqlite.DisposeAsync();
         }
     }
 
