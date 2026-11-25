@@ -1,10 +1,12 @@
 using System.Diagnostics;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using TaskManagement.Api.Auth;
 using TaskManagement.Api.Data;
+using TaskManagement.Api.Tasks;
 
 var provisionAdmin = args.Contains("--seed-admin", StringComparer.Ordinal);
 var builder = WebApplication.CreateBuilder(args.Where(arg => arg != "--seed-admin").ToArray());
@@ -22,7 +24,9 @@ builder.Services.AddProblemDetails(options =>
             Activity.Current?.Id ?? context.HttpContext.TraceIdentifier;
     };
 });
-builder.Services.AddControllersWithViews(options => options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()));
+builder.Services.AddControllersWithViews(options => options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute()))
+    .AddJsonOptions(options => options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(allowIntegerValues: false)));
+builder.Services.AddExceptionHandler<TaskExceptionHandler>();
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("Tasks")));
 
@@ -64,6 +68,9 @@ builder.Services.AddAntiforgery(options =>
     options.Cookie.SameSite = SameSiteMode.Strict;
 });
 builder.Services.AddScoped<AccountService>();
+builder.Services.AddScoped<TaskStore>();
+builder.Services.AddScoped<TaskService>();
+builder.Services.AddSingleton(TimeProvider.System);
 
 await using var app = builder.Build();
 
@@ -82,7 +89,10 @@ if (provisionAdmin)
 }
 
 app.UseSerilogRequestLogging();
-app.UseExceptionHandler(new ExceptionHandlerOptions { SuppressDiagnosticsCallback = _ => false });
+app.UseExceptionHandler(new ExceptionHandlerOptions
+{
+    SuppressDiagnosticsCallback = context => context.Exception is TaskProblem or DbUpdateConcurrencyException
+});
 app.UseStatusCodePages();
 app.UseAuthentication();
 app.UseAuthorization();
