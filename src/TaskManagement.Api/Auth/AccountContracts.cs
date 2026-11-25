@@ -14,3 +14,5 @@ public sealed record LoginRequest(
 public sealed record AccountProfile(string Id, string DisplayName, string Email, IList<string> Roles);
 
 public sealed record AssigneeOption(string Id, string DisplayName, string Email);
+
+public enum AccountDeletion { Deleted, NotFound, AdminProtected, Conflict }

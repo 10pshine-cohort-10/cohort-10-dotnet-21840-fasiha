@@ -17,6 +17,7 @@ public sealed class WorkTask
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; set; }
     public Guid Version { get; set; } = Guid.NewGuid();
+    public bool IsDeleted { get; set; }
     public required string CreatorId { get; init; }
     public required AppUser Creator { get; init; }
     public string? AssigneeId { get; set; }

@@ -52,10 +52,12 @@ public sealed class TaskStore(AppDbContext db)
 
     public void Add(WorkTask task) => db.Tasks.Add(task);
 
-    public void Remove(WorkTask task) => db.Tasks.Remove(task);
-
     public Task SaveAsync(CancellationToken cancellationToken) => db.SaveChangesAsync(cancellationToken);
 
-    private IQueryable<WorkTask> VisibleTo(TaskActor actor) =>
-        actor.IsAdmin ? db.Tasks : db.Tasks.Where(task => task.CreatorId == actor.Id || task.AssigneeId == actor.Id);
+    private IQueryable<WorkTask> VisibleTo(TaskActor actor)
+    {
+        // Keep the creator and assignee on existing tasks when their accounts are deactivated.
+        var tasks = db.Tasks.IgnoreQueryFilters([AppDbContext.ActiveUsersFilter]);
+        return actor.IsAdmin ? tasks : tasks.Where(task => task.CreatorId == actor.Id || task.AssigneeId == actor.Id);
+    }
 }

@@ -1,7 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using TaskManagement.Api.Auth;
+using TaskManagement.Api.Data;
 using TaskManagement.Api.Tasks;
 
 namespace TaskManagement.Tests;
@@ -59,6 +62,14 @@ public sealed class TaskEndpointsTests(TaskApiFactory app) : IClassFixture<TaskA
         Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
         using var missing = await client.GetAsync(path);
         Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+        Assert.Empty((await GetAsync<TaskPage>(client, "/api/tasks?search=sprint")).Items);
+        Assert.Equal(0, (await GetAsync<TaskCounts>(client, "/api/tasks/counts")).Completed);
+
+        await using var scope = app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var retained = await db.Tasks.IgnoreQueryFilters().SingleAsync(item => item.Id == task.Id);
+        Assert.True(retained.IsDeleted);
+        Assert.Equal("Publish sprint plan", retained.Title);
     }
 
     [Fact]

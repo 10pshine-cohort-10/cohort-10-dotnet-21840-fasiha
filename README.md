@@ -6,6 +6,7 @@ Taskline is a .NET full-stack project for the Cohort 10 assignment by Fasiha Tar
 - Administrators see and manage all tasks, assign work across accounts, and see dashboard totals for the entire workspace.
 - Tasks support pending, in-progress, and completed statuses, three priorities, categories, due dates, and search. Search covers the title, description, and category.
 - The API produces structured Serilog request and activity logs. Error responses use Problem Details. Task updates and deletion require the current version to protect concurrent edits.
+- Task deletion sets `IsDeleted` and hides the task from lists, detail views, and totals. Administrators can deactivate regular users through the API. Deactivation sets `IsDeleted`, revokes access, and preserves the user's task history.
 
 ## Run locally
 
@@ -66,13 +67,14 @@ A browser or API client must retain cookies. Before each POST, PUT, PATCH, or DE
 | GET | `/api/account/me` | Get the signed-in user's profile and roles |
 | POST | `/api/account/logout` | End the session |
 | GET | `/api/account/assignees?search=...` | Look up accounts for assignment as an administrator |
+| DELETE | `/api/account/users/{id}` | Soft-delete a regular user as an administrator |
 | GET | `/api/tasks` | List visible tasks with optional `search`, `status`, `priority`, `category`, `page`, and `pageSize` |
 | GET | `/api/tasks/counts` | Count visible tasks by status |
 | GET | `/api/tasks/{id}` | Read task details and the current `version` |
 | POST | `/api/tasks` | Create a task |
 | PUT | `/api/tasks/{id}` | Replace editable fields using the current `version` |
 | PATCH | `/api/tasks/{id}/status` | Change `status` using the current `version` |
-| DELETE | `/api/tasks/{id}?version=...` | Delete a task using the current `version` |
+| DELETE | `/api/tasks/{id}?version=...` | Soft-delete a task using the current `version` |
 
 Task fields are `title`, `description`, `category`, `status`, `priority`, `dueDate`, and `assigneeId`. Use `yyyy-MM-dd` for due dates, `Pending`, `InProgress`, or `Completed` for status, and `Low`, `Medium`, or `High` for priority. A stale version returns HTTP 409.
 

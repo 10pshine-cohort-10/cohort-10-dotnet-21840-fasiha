@@ -1,6 +1,10 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using TaskManagement.Api.Auth;
+using TaskManagement.Api.Data;
+using TaskManagement.Api.Tasks;
 
 namespace TaskManagement.Tests;
 
@@ -40,5 +44,48 @@ public sealed class AccountEndpointsTests(TaskApiFactory app) : IClassFixture<Ta
         Assert.Equal(HttpStatusCode.NoContent, logout.StatusCode);
         using var afterLogout = await client.GetAsync("/api/account/me");
         Assert.Equal(HttpStatusCode.Unauthorized, afterLogout.StatusCode);
+    }
+
+    [Fact]
+    public async Task AdminSoftDeletesUserAndRevokesTheirSessionWithoutHidingOwnedTasks()
+    {
+        const string email = "deactivate@example.test";
+        using var user = await app.SignInNewUserAsync(email, "Deactivated User");
+        using var admin = await app.SignInAdminAsync("deletion-admin@example.test");
+        var profile = (await user.GetFromJsonAsync<AccountProfile>("/api/account/me"))!;
+        var adminProfile = (await admin.GetFromJsonAsync<AccountProfile>("/api/account/me"))!;
+        var path = "/api/account/users/" + profile.Id;
+
+        using var unauthorized = await TaskApiFactory.SendAsync(user, HttpMethod.Delete, path);
+        Assert.Equal(HttpStatusCode.Forbidden, unauthorized.StatusCode);
+        using var protectedAdmin = await TaskApiFactory.SendAsync(admin, HttpMethod.Delete, "/api/account/users/" + adminProfile.Id);
+        Assert.Equal(HttpStatusCode.Conflict, protectedAdmin.StatusCode);
+        using var created = await TaskApiFactory.SendAsync(user, HttpMethod.Post, "/api/tasks", new { title = "Retained task" });
+        created.EnsureSuccessStatusCode();
+        var task = (await created.Content.ReadFromJsonAsync<TaskDetail>(TaskApiFactory.Json))!;
+
+        using var deleted = await TaskApiFactory.SendAsync(admin, HttpMethod.Delete, path);
+        Assert.Equal(HttpStatusCode.NoContent, deleted.StatusCode);
+        using var profileAfterDeletion = await user.GetAsync("/api/account/me");
+        Assert.Equal(HttpStatusCode.Unauthorized, profileAfterDeletion.StatusCode);
+        using var login = await TaskApiFactory.SendAsync(user, HttpMethod.Post, "/api/account/login",
+            new { email, password = "cohort-test-21840" });
+        Assert.Equal(HttpStatusCode.Unauthorized, login.StatusCode);
+        using var registration = await TaskApiFactory.SendAsync(user, HttpMethod.Post, "/api/account/register",
+            new { email, displayName = "Duplicate User", password = "cohort-test-21840" });
+        Assert.Equal(HttpStatusCode.Conflict, registration.StatusCode);
+
+        var options = await admin.GetFromJsonAsync<AssigneeOption[]>("/api/account/assignees?search=deactivate");
+        Assert.Empty(options!);
+        using var blockedAssignment = await TaskApiFactory.SendAsync(admin, HttpMethod.Post, "/api/tasks",
+            new { title = "Blocked assignment", assigneeId = profile.Id });
+        Assert.Equal(HttpStatusCode.BadRequest, blockedAssignment.StatusCode);
+        var retainedTask = await admin.GetFromJsonAsync<TaskDetail>("/api/tasks/" + task.Id, TaskApiFactory.Json);
+        Assert.Equal(profile.Id, retainedTask?.Creator.Id);
+
+        await using var scope = app.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var account = await db.Users.IgnoreQueryFilters().SingleAsync(item => item.Id == profile.Id);
+        Assert.True(account.IsDeleted);
     }
 }

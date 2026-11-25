@@ -22,6 +22,9 @@ public sealed class AccountService(
             });
 
         var email = request.Email.Trim();
+        if (await FindAccountIncludingDeletedAsync(email, cancellationToken) is not null)
+            return DuplicateAccount();
+
         var user = new AppUser { Email = email, UserName = email, DisplayName = displayName };
         try
         {
@@ -32,11 +35,7 @@ public sealed class AccountService(
         }
         catch (DbUpdateException exception) when (exception.InnerException is SqlException { Number: 2601 or 2627 })
         {
-            return IdentityResult.Failed(new IdentityError
-            {
-                Code = "DuplicateEmail",
-                Description = "An account already exists for this email."
-            });
+            return DuplicateAccount();
         }
     }
 
@@ -66,6 +65,24 @@ public sealed class AccountService(
         logger.LogInformation("Account {UserId} signed out", userId);
     }
 
+    public async Task<AccountDeletion> DeleteUserAsync(string id, string? administratorId)
+    {
+        var user = await users.FindByIdAsync(id);
+        if (user is null)
+            return AccountDeletion.NotFound;
+
+        if (await users.IsInRoleAsync(user, RoleNames.Admin))
+            return AccountDeletion.AdminProtected;
+
+        user.IsDeleted = true;
+        var result = await users.UpdateSecurityStampAsync(user);
+        if (!result.Succeeded)
+            return AccountDeletion.Conflict;
+
+        logger.LogInformation("Administrator {AdminId} soft-deleted account {UserId}", administratorId, id);
+        return AccountDeletion.Deleted;
+    }
+
     public async Task ProvisionAdminAsync(string email, string password, string displayName, CancellationToken cancellationToken)
     {
         email = email.Trim();
@@ -74,9 +91,12 @@ public sealed class AccountService(
             || displayName.Length is < 2 or > 80 || password.Length is < 10 or > 128)
             throw new InvalidOperationException("Provide a valid admin email, name, and password (10–128 characters).");
 
-        var existing = await users.FindByEmailAsync(email);
+        var existing = await FindAccountIncludingDeletedAsync(email, cancellationToken);
         if (existing is not null)
         {
+            if (existing.IsDeleted)
+                throw new InvalidOperationException("The requested admin email belongs to a deactivated account.");
+
             if (!await users.IsInRoleAsync(existing, RoleNames.Admin))
                 throw new InvalidOperationException("The requested admin email already belongs to a user account.");
             logger.LogInformation("Administrator {UserId} already exists", existing.Id);
@@ -89,6 +109,20 @@ public sealed class AccountService(
             throw new InvalidOperationException($"Admin provisioning failed: {string.Join(", ", result.Errors.Select(error => error.Description))}");
         logger.LogInformation("Administrator {UserId} provisioned", admin.Id);
     }
+
+    private Task<AppUser?> FindAccountIncludingDeletedAsync(string email, CancellationToken cancellationToken)
+    {
+        var normalizedEmail = users.NormalizeEmail(email);
+        return db.Users.IgnoreQueryFilters().SingleOrDefaultAsync(
+            user => user.NormalizedUserName == normalizedEmail, cancellationToken);
+    }
+
+    private static IdentityResult DuplicateAccount() =>
+        IdentityResult.Failed(new IdentityError
+        {
+            Code = "DuplicateEmail",
+            Description = "An account already exists for this email."
+        });
 
     private async Task<IdentityResult> CreateWithRoleAsync(
         AppUser user, string password, string role, CancellationToken cancellationToken)

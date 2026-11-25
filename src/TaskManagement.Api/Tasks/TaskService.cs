@@ -63,9 +63,10 @@ public sealed class TaskService(TaskStore store, TimeProvider clock, ILogger<Tas
         var task = await FindAsync(actor, id, cancellationToken);
         RequireManager(task, actor);
         RequireCurrentVersion(task, version);
-        store.Remove(task);
+        task.IsDeleted = true;
+        Touch(task, clock.GetUtcNow().UtcDateTime);
         await store.SaveAsync(cancellationToken);
-        logger.LogInformation("Account {UserId} deleted task {TaskId}", actor.Id, id);
+        logger.LogInformation("Account {UserId} soft-deleted task {TaskId}", actor.Id, id);
     }
 
     private async Task<WorkTask> FindAsync(TaskActor actor, Guid id, CancellationToken cancellationToken) =>

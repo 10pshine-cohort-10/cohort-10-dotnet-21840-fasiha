@@ -62,6 +62,19 @@ public sealed class AccountController(
         return NoContent();
     }
 
+    [HttpDelete("users/{id}")]
+    [Authorize(Roles = RoleNames.Admin)]
+    public async Task<IActionResult> DeleteUser(string id)
+    {
+        return await accounts.DeleteUserAsync(id, users.GetUserId(User)) switch
+        {
+            AccountDeletion.Deleted => NoContent(),
+            AccountDeletion.NotFound => Problem(statusCode: StatusCodes.Status404NotFound, title: "Account could not be found."),
+            AccountDeletion.AdminProtected => Problem(statusCode: StatusCodes.Status409Conflict, title: "Administrator accounts cannot be deactivated here."),
+            _ => Problem(statusCode: StatusCodes.Status409Conflict, title: "The account changed. Reload it and try again.")
+        };
+    }
+
     [HttpGet("assignees")]
     [Authorize(Roles = RoleNames.Admin)]
     public async Task<IReadOnlyList<AssigneeOption>> Assignees(
