@@ -11,7 +11,7 @@ public sealed class TaskEndpointsTests(TaskApiFactory app) : IClassFixture<TaskA
     [Fact]
     public async Task OwnerCanCreateFilterUpdateAndDelete()
     {
-        using var client = await app.SignInNewMemberAsync("owner@example.test", "Task Owner");
+        using var client = await app.SignInNewUserAsync("owner@example.test", "Task Owner");
         var draft = new TaskInput
         {
             Title = "Prepare sprint plan",
@@ -65,8 +65,8 @@ public sealed class TaskEndpointsTests(TaskApiFactory app) : IClassFixture<TaskA
     public async Task AdminCanDelegateAndAssigneeCanUpdateOnlyStatus()
     {
         using var admin = await app.SignInAdminAsync("admin@example.test");
-        using var worker = await app.SignInNewMemberAsync("worker@example.test", "Assigned Member");
-        using var outsider = await app.SignInNewMemberAsync("outsider@example.test", "Other Member");
+        using var worker = await app.SignInNewUserAsync("worker@example.test", "Assigned User");
+        using var outsider = await app.SignInNewUserAsync("outsider@example.test", "Other User");
         var assignees = await GetAsync<AssigneeOption[]>(admin, "/api/account/assignees?search=worker");
         var assignee = Assert.Single(assignees);
 

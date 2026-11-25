@@ -7,11 +7,11 @@ namespace TaskManagement.Tests;
 public sealed class AccountEndpointsTests(TaskApiFactory app) : IClassFixture<TaskApiFactory>
 {
     [Fact]
-    public async Task RegistrationLoginProfileAndLogoutUseMemberSessionAndCsrf()
+    public async Task RegistrationLoginProfileAndLogoutUseUserSessionAndCsrf()
     {
         const string email = "member@example.test";
         using var client = app.CreateSession();
-        var request = new { email, displayName = "Taskline Member", password = "cohort-test-21840", role = "Admin" };
+        var request = new { email, displayName = "Taskline User", password = "cohort-test-21840", role = "Admin" };
 
         using var anonymousProfile = await client.GetAsync("/api/account/me");
         Assert.Equal(HttpStatusCode.Unauthorized, anonymousProfile.StatusCode);
@@ -30,9 +30,9 @@ public sealed class AccountEndpointsTests(TaskApiFactory app) : IClassFixture<Ta
 
         var profile = await client.GetFromJsonAsync<AccountProfile>("/api/account/me");
         Assert.NotNull(profile);
-        Assert.Equal("Taskline Member", profile.DisplayName);
+        Assert.Equal("Taskline User", profile.DisplayName);
         Assert.Equal(email, profile.Email);
-        Assert.Equal(RoleNames.Member, Assert.Single(profile.Roles));
+        Assert.Equal(RoleNames.User, Assert.Single(profile.Roles));
 
         using var directory = await client.GetAsync("/api/account/assignees");
         Assert.Equal(HttpStatusCode.Forbidden, directory.StatusCode);

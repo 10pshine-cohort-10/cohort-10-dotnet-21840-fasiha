@@ -82,7 +82,7 @@ public sealed class TaskApiFactory : WebApplicationFactory<Program>, IAsyncLifet
             AllowAutoRedirect = false
         });
 
-    public async Task<HttpClient> SignInNewMemberAsync(string email, string name)
+    public async Task<HttpClient> SignInNewUserAsync(string email, string name)
     {
         var client = CreateSession();
         using var registration = await SendAsync(client, HttpMethod.Post, "/api/account/register",

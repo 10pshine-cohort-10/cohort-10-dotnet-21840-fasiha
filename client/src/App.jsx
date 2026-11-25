@@ -15,7 +15,7 @@ const sections = [
 
 function Workspace({ user, onLogout }) {
   const { pathname } = useLocation();
-  const role = user.roles.includes('Admin') ? 'Administrator' : 'Member';
+  const role = user.roles.includes('Admin') ? 'Administrator' : 'User';
 
   useEffect(() => {
     window.scrollTo({ top: 0 });

@@ -25,9 +25,9 @@ public sealed class AccountService(
         var user = new AppUser { Email = email, UserName = email, DisplayName = displayName };
         try
         {
-            var result = await CreateWithRoleAsync(user, request.Password, RoleNames.Member, cancellationToken);
+            var result = await CreateWithRoleAsync(user, request.Password, RoleNames.User, cancellationToken);
             if (result.Succeeded)
-                logger.LogInformation("Member account {UserId} registered", user.Id);
+                logger.LogInformation("User account {UserId} registered", user.Id);
             return result;
         }
         catch (DbUpdateException exception) when (exception.InnerException is SqlException { Number: 2601 or 2627 })
@@ -78,7 +78,7 @@ public sealed class AccountService(
         if (existing is not null)
         {
             if (!await users.IsInRoleAsync(existing, RoleNames.Admin))
-                throw new InvalidOperationException("The requested admin email already belongs to a member account.");
+                throw new InvalidOperationException("The requested admin email already belongs to a user account.");
             logger.LogInformation("Administrator {UserId} already exists", existing.Id);
             return;
         }

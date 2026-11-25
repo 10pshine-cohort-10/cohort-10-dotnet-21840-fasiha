@@ -40,8 +40,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options)
             new IdentityRole
             {
                 Id = "13b17f93-f0d0-4b7e-90a1-71a3dabd6bd0",
-                Name = RoleNames.Member,
-                NormalizedName = "MEMBER",
+                Name = RoleNames.User,
+                NormalizedName = "USER",
                 ConcurrencyStamp = "member-initial"
             });
     }

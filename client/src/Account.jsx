@@ -95,7 +95,7 @@ export function Profile({ user, onLogout }) {
         <div className="profile-identity"><Avatar name={user.displayName} /><h2>{user.displayName}</h2></div>
         <dl className="detail-grid">
           <div><dt>Email address</dt><dd>{user.email}</dd></div>
-          <div><dt>Role</dt><dd>{user.roles.includes('Admin') ? 'Administrator' : 'Member'}</dd></div>
+          <div><dt>Role</dt><dd>{user.roles.includes('Admin') ? 'Administrator' : 'User'}</dd></div>
         </dl>
         {error && <ErrorMessage error={error} />}
         <button type="button" className="button" onClick={logout} disabled={saving}><LogOut size={17} aria-hidden="true" />{saving ? 'Signing out…' : 'Sign out'}</button>

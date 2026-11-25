@@ -60,8 +60,8 @@ namespace TaskManagement.Api.Data.Migrations
                         {
                             Id = "13b17f93-f0d0-4b7e-90a1-71a3dabd6bd0",
                             ConcurrencyStamp = "member-initial",
-                            Name = "Member",
-                            NormalizedName = "MEMBER"
+                            Name = "User",
+                            NormalizedName = "USER"
                         });
                 });
 

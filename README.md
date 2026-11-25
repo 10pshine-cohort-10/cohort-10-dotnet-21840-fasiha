@@ -2,7 +2,7 @@
 
 Taskline is a .NET full-stack project for the Cohort 10 assignment by Fasiha Tariq. It uses ASP.NET Core Web API, ASP.NET Core Identity, EF Core with SQL Server, and a React frontend.
 
-- Members see tasks they created or were assigned. They can manage their own tasks and change the status of tasks assigned to them.
+- Users see tasks they created or were assigned. They can manage their own tasks and change the status of tasks assigned to them.
 - Administrators see and manage all tasks, assign work across accounts, and see dashboard totals for the entire workspace.
 - Tasks support pending, in-progress, and completed statuses, three priorities, categories, due dates, and search. Search covers the title, description, and category.
 - The API produces structured Serilog request and activity logs. Error responses use Problem Details. Task updates and deletion require the current version to protect concurrent edits.
@@ -36,7 +36,7 @@ For an HTTPS deployment, run `npm ci` and `npm run build` inside `client`. Serve
 
 ### Provision an administrator
 
-Public registration creates member accounts. Run this command after applying the database migrations, with a distinct email for the administrator. The command creates the account once and exits.
+Public registration creates user accounts. Run this command after applying the database migrations, with a distinct email for the administrator. The command creates the account once and exits.
 
 ```powershell
 $env:ASPNETCORE_ENVIRONMENT = 'Development'
@@ -51,7 +51,7 @@ try {
 }
 ```
 
-Use at least 10 characters with a lowercase letter and a digit. Sign in through the same screen as a member after provisioning.
+Use at least 10 characters with a lowercase letter and a digit. Sign in through the same screen as a regular user after provisioning.
 
 ## API
 
