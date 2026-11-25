@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+**/node_modules/
+**/dist/
+**/TestResults/
+.sonarqube/
+.vs/
+*.user
+*.log
+.env
+.env.*
+!.env.example
