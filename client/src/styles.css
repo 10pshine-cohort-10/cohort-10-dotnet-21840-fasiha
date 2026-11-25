@@ -95,7 +95,8 @@ tbody tr:hover { background: #fbfbff; }
 .pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 99px; color: var(--tone-fg); background: var(--tone-bg); white-space: nowrap; font-size: .84rem; font-weight: 750; }
 .pill > span { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
 
-label { display: grid; gap: 6px; color: #373951; font-size: .875rem; font-weight: 750; min-width: 0; }
+label, .field { display: grid; gap: 6px; min-width: 0; }
+label { color: #373951; font-size: .875rem; font-weight: 750; }
 input, select, textarea { min-width: 0; width: 100%; min-height: 42px; padding: 8px 10px; border: 1px solid #d8daea; border-radius: 8px; color: #22233a; background: var(--surface); font-size: 1rem; font-weight: 400; }
 input::placeholder, textarea::placeholder { color: #66687b; }
 textarea { resize: vertical; }

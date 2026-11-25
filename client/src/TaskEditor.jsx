@@ -97,12 +97,13 @@ function AssigneeFields({ selection, onSelect }) {
   return (
     <div className="assignee-fields">
       <label>Find an account<input type="search" value={search} maxLength={80} placeholder="Search name or email" onChange={(event) => setSearch(event.target.value)} /></label>
-      <label>Assignee
-        <select value={selection?.id || ''} onChange={(event) => onSelect(options.find((person) => person.id === event.target.value) || null)}>
+      <div className="field">
+        <label htmlFor="task-assignee">Assignee</label>
+        <select id="task-assignee" value={selection?.id || ''} onChange={(event) => onSelect(options.find((person) => person.id === event.target.value) || null)}>
           <option value="">Unassigned</option>
           {options.map((person) => <option key={person.id} value={person.id}>{person.displayName}{person.email ? ' (' + person.email + ')' : ''}</option>)}
         </select>
-      </label>
+      </div>
       {result.state === 'loading' && <small role="status">Finding accounts…</small>}
       {result.state === 'error' && <ErrorMessage error={result.error} retry={result.retry} />}
       {result.state === 'ready' && results.length === 0 && <small role="status">No accounts match this search.</small>}
@@ -160,8 +161,14 @@ function TaskForm({ task, user, reload }) {
         <label>Title<input name="title" required maxLength={120} defaultValue={task?.title} /></label>
         <label>Description<textarea name="description" rows={5} maxLength={2000} defaultValue={task?.description || ''} /></label>
         <div className="field-grid">
-          <label>Status<select name="status" defaultValue={task?.status || 'Pending'}><EnumOptions options={statuses} /></select></label>
-          <label>Priority<select name="priority" defaultValue={task?.priority || 'Medium'}><EnumOptions options={priorities} /></select></label>
+          <div className="field">
+            <label htmlFor="editor-status">Status</label>
+            <select id="editor-status" name="status" defaultValue={task?.status || 'Pending'}><EnumOptions options={statuses} /></select>
+          </div>
+          <div className="field">
+            <label htmlFor="editor-priority">Priority</label>
+            <select id="editor-priority" name="priority" defaultValue={task?.priority || 'Medium'}><EnumOptions options={priorities} /></select>
+          </div>
           <label>Category<input name="category" maxLength={60} defaultValue={task?.category || ''} placeholder="e.g. Planning" /></label>
           <label>Due date<input type="date" name="dueDate" min="0001-01-01" max="9999-12-31" defaultValue={task?.dueDate || ''} /></label>
         </div>

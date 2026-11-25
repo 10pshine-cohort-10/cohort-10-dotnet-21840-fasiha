@@ -16,7 +16,7 @@ function NewTaskLink() {
 
 function TaskTable({ items }) {
   return (
-    <div className="table-scroll">
+    <div className="table-scroll" role="region" aria-label="Task table" tabIndex={0}>
       <table>
         <thead><tr><th scope="col">Task</th><th scope="col">Status</th><th scope="col">Priority</th><th scope="col">Due date</th><th scope="col">Assignee</th></tr></thead>
         <tbody>
@@ -106,8 +106,14 @@ export function TaskList() {
       <section className="panel task-list" aria-label="Task list">
         <form className="filters" onSubmit={apply} key={filterKey}>
           <label className="search-field">Search<span><Search size={17} aria-hidden="true" /><input type="search" name="search" placeholder="Search tasks" maxLength={120} defaultValue={search} /></span></label>
-          <label>Status<select name="status" defaultValue={status}><option value="">All statuses</option>{Object.entries(statuses).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-          <label>Priority<select name="priority" defaultValue={priority}><option value="">All priorities</option>{Object.entries(priorities).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          <div className="field">
+            <label htmlFor="filter-status">Status</label>
+            <select id="filter-status" name="status" defaultValue={status}><option value="">All statuses</option>{Object.entries(statuses).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+          </div>
+          <div className="field">
+            <label htmlFor="filter-priority">Priority</label>
+            <select id="filter-priority" name="priority" defaultValue={priority}><option value="">All priorities</option>{Object.entries(priorities).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select>
+          </div>
           <label>Category<input name="category" placeholder="All categories" maxLength={60} defaultValue={category} /></label>
           <button className="button">Apply filters</button>
           {filtered && <button className="button button-plain" type="button" onClick={clear}>Clear</button>}
