@@ -107,6 +107,8 @@ input[type="search"] { padding-right: 8px; }
 .search-field input { padding-left: 35px; }
 .filters { display: grid; grid-template-columns: minmax(145px, 1.45fr) repeat(3, minmax(110px, 1fr)) auto; align-items: end; gap: 11px; padding: 18px 22px; }
 .filters .button-plain { justify-self: start; }
+.task-transfer { display: grid; gap: 10px; padding: 16px 22px 0; }
+.transfer-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .pagination { display: flex; justify-content: space-between; flex-wrap: wrap; align-items: center; gap: 8px 15px; padding: 13px 22px; color: var(--muted); border-top: 1px solid var(--border); font-size: .875rem; }
 .pagination > div { display: flex; align-items: center; gap: 10px; }
 
@@ -192,6 +194,7 @@ dd { margin: 4px 0 0; overflow-wrap: anywhere; }
   .stat-card > div > span { font-size: .83rem; }
   .stat-card strong { font-size: 1.55rem; }
   .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); padding: 14px; gap: 8px; }
+  .task-transfer { padding-inline: 14px; }
   .panel-heading, th:first-child, td:first-child { padding-left: 14px; }
   .panel-heading, th:last-child, td:last-child { padding-right: 14px; }
   .detail-grid { column-gap: 10px; }

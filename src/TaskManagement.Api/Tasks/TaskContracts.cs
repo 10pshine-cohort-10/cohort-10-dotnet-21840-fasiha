@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace TaskManagement.Api.Tasks;
 
-public class TaskInput
+public class TaskFields
 {
     [Required, StringLength(120)]
     public string Title { get; init; } = string.Empty;
@@ -20,9 +20,25 @@ public class TaskInput
     public WorkPriority Priority { get; init; } = WorkPriority.Medium;
 
     public DateOnly? DueDate { get; init; }
+}
 
+public class TaskInput : TaskFields
+{
     [StringLength(450)]
     public string? AssigneeId { get; init; }
+}
+
+public sealed class TaskFile
+{
+    public const int FormatVersion = 1;
+    public const int MaxTasks = 1000;
+    public const long MaxBytes = 16 * 1024 * 1024;
+
+    [Required, Range(FormatVersion, FormatVersion, ErrorMessage = "Use Taskline file format version 1.")]
+    public int? Version { get; init; }
+
+    [Required, MaxLength(MaxTasks)]
+    public TaskFields?[]? Tasks { get; init; }
 }
 
 public sealed class EditTaskInput : TaskInput

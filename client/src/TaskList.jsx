@@ -3,6 +3,7 @@ import { CheckCircle2, CircleDashed, Clock3, Plus, Search } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from './api.js';
 import { useTaskRevision } from './taskUpdates.jsx';
+import { TaskTransfer } from './TaskTransfer.jsx';
 import { Avatar, dateLabel, EmptyTasks, ErrorMessage, Loading, priorities, PriorityPill, statuses, StatusPill, useResource } from './common.jsx';
 
 const cards = [
@@ -105,6 +106,7 @@ export function TaskList() {
     <>
       <header className="page-heading"><div><h1>Tasks</h1><p>Find tasks, update progress, and manage deadlines.</p></div><NewTaskLink /></header>
       <section className="panel task-list" aria-label="Task list">
+        <TaskTransfer filters={{ search, category, status, priority }} onImported={result.retry} />
         <form className="filters" onSubmit={apply} key={filterKey}>
           <label className="search-field">Search<span><Search size={17} aria-hidden="true" /><input type="search" name="search" placeholder="Search tasks" maxLength={120} defaultValue={search} /></span></label>
           <div className="field">

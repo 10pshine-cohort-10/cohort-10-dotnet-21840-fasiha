@@ -10,6 +10,34 @@ public sealed class TaskService(TaskStore store, TaskUpdates updates, TimeProvid
     public Task<TaskCounts> CountsAsync(TaskActor actor, CancellationToken cancellationToken) =>
         store.CountsAsync(actor, cancellationToken);
 
+    public async Task<TaskFile> ExportAsync(TaskActor actor, TaskFilter filter, CancellationToken cancellationToken)
+    {
+        var items = await store.ExportAsync(actor, filter, cancellationToken);
+        if (items.Length > TaskFile.MaxTasks)
+            throw new TaskProblem(StatusCodes.Status400BadRequest, $"Filter the task list to {TaskFile.MaxTasks:N0} tasks or fewer before exporting.");
+
+        logger.LogInformation("Account {UserId} exported {TaskCount} tasks", actor.Id, items.Length);
+        return new TaskFile { Version = TaskFile.FormatVersion, Tasks = items };
+    }
+
+    public async Task<int> ImportAsync(TaskActor actor, TaskFields?[] fields, CancellationToken cancellationToken)
+    {
+        if (fields.Any(item => item is null))
+            throw new TaskProblem(StatusCodes.Status400BadRequest, "Every item in the file must be a task.");
+        if (fields.Length == 0)
+            return 0;
+
+        var owner = await FindUserAsync(actor.Id, cancellationToken);
+        var now = clock.GetUtcNow().UtcDateTime;
+        foreach (var item in fields)
+            store.Add(NewTask(owner, item!, owner, now));
+
+        await store.SaveAsync(cancellationToken);
+        logger.LogInformation("Account {UserId} imported {TaskCount} tasks", actor.Id, fields.Length);
+        await updates.PublishAsync(owner.Id);
+        return fields.Length;
+    }
+
     public async Task<TaskDetail> GetAsync(TaskActor actor, Guid id, CancellationToken cancellationToken) =>
         Describe(await FindAsync(actor, id, cancellationToken), actor);
 
@@ -20,9 +48,9 @@ public sealed class TaskService(TaskStore store, TaskUpdates updates, TimeProvid
         if (!actor.IsAdmin && assigneeId != actor.Id)
             throw new TaskProblem(StatusCodes.Status403Forbidden, "Only an administrator can assign tasks to another account.");
 
-        var now = clock.GetUtcNow().UtcDateTime;
-        var task = new WorkTask { CreatorId = creator.Id, Creator = creator, CreatedAt = now };
-        ApplyDetails(task, input, assigneeId is null ? null : await FindUserAsync(assigneeId, cancellationToken), now);
+        var assignee = assigneeId == creator.Id ? creator
+            : assigneeId is null ? null : await FindUserAsync(assigneeId, cancellationToken);
+        var task = NewTask(creator, input, assignee, clock.GetUtcNow().UtcDateTime);
         store.Add(task);
         await store.SaveAsync(cancellationToken);
         logger.LogInformation("Account {UserId} created task {TaskId} assigned to {AssigneeId}", actor.Id, task.Id, task.AssigneeId);
@@ -94,7 +122,14 @@ public sealed class TaskService(TaskStore store, TaskUpdates updates, TimeProvid
             throw new TaskProblem(StatusCodes.Status409Conflict, "This task changed. Reload it and try again.");
     }
 
-    private static void ApplyDetails(WorkTask task, TaskInput input, AppUser? assignee, DateTime now)
+    private static WorkTask NewTask(AppUser creator, TaskFields fields, AppUser? assignee, DateTime now)
+    {
+        var task = new WorkTask { CreatorId = creator.Id, Creator = creator, CreatedAt = now };
+        ApplyDetails(task, fields, assignee, now);
+        return task;
+    }
+
+    private static void ApplyDetails(WorkTask task, TaskFields input, AppUser? assignee, DateTime now)
     {
         task.Title = input.Title.Trim();
         task.Description = string.IsNullOrWhiteSpace(input.Description) ? null : input.Description.Trim();

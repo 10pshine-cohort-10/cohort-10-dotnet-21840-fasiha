@@ -7,7 +7,7 @@ export class ApiError extends Error {
 }
 
 async function request(path, options = {}) {
-  const { method = 'GET', body, signal, requiresSession = true } = options;
+  const { method = 'GET', body, signal, requiresSession = true, download = false } = options;
   const headers = { Accept: 'application/json, application/problem+json' };
   if (method !== 'GET') {
     const { token } = await request('/account/csrf', { requiresSession: false, signal });
@@ -22,7 +22,7 @@ async function request(path, options = {}) {
       headers,
       credentials: 'same-origin',
       signal,
-      body: body === undefined ? undefined : JSON.stringify(body),
+      body: typeof body === 'string' ? body : JSON.stringify(body),
     });
   } catch (error) {
     if (error.name === 'AbortError') throw error;
@@ -30,6 +30,7 @@ async function request(path, options = {}) {
   }
 
   if (response.status === 204 || response.status === 201 && path === '/account/register') return null;
+  if (download && response.ok) return response.blob();
   const isJson = response.headers.get('content-type')?.includes('json');
   const data = isJson ? await response.json() : null;
   if (!response.ok) {
@@ -57,6 +58,8 @@ export const api = {
   assignees: (search, signal) => request(withQuery('/account/assignees', { search }), { signal }),
   taskCounts: (signal) => request('/tasks/counts', { signal }),
   tasks: (filter, signal) => request(withQuery('/tasks', filter), { signal }),
+  exportTasks: (filter) => request(withQuery('/tasks/export', filter), { download: true }),
+  importTasks: (fileText) => request('/tasks/import', { method: 'POST', body: fileText }),
   task: (id, signal) => request('/tasks/' + encodeURIComponent(id), { signal }),
   createTask: (body) => request('/tasks', { method: 'POST', body }),
   updateTask: (id, body) => request('/tasks/' + encodeURIComponent(id), { method: 'PUT', body }),

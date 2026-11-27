@@ -7,7 +7,31 @@ public sealed class TaskStore(AppDbContext db)
 {
     public async Task<TaskPage> ListAsync(TaskActor actor, TaskFilter filter, CancellationToken cancellationToken)
     {
-        var query = VisibleTo(actor).AsNoTracking();
+        var query = FilteredTo(actor, filter).AsNoTracking();
+        var total = await query.CountAsync(cancellationToken);
+        var items = await Ordered(query)
+            .Skip((filter.Page - 1) * filter.PageSize).Take(filter.PageSize)
+            .Select(task => new TaskSummary(task.Id, task.Title, task.Category, task.Status, task.Priority,
+                task.DueDate, task.Assignee == null ? null : new TaskPerson(task.Assignee.Id, task.Assignee.DisplayName)))
+            .ToListAsync(cancellationToken);
+        return new(items, total, filter.Page, filter.PageSize);
+    }
+
+    public Task<TaskFields[]> ExportAsync(TaskActor actor, TaskFilter filter, CancellationToken cancellationToken) =>
+        Ordered(FilteredTo(actor, filter).AsNoTracking()).Take(TaskFile.MaxTasks + 1)
+            .Select(task => new TaskFields
+            {
+                Title = task.Title,
+                Description = task.Description,
+                Category = task.Category,
+                Status = task.Status,
+                Priority = task.Priority,
+                DueDate = task.DueDate
+            }).ToArrayAsync(cancellationToken);
+
+    private IQueryable<WorkTask> FilteredTo(TaskActor actor, TaskFilter filter)
+    {
+        var query = VisibleTo(actor);
         if (filter.Status is { } status)
             query = query.Where(task => task.Status == status);
         if (filter.Priority is { } priority)
@@ -25,14 +49,11 @@ public sealed class TaskStore(AppDbContext db)
                 || (task.Category != null && task.Category.Contains(search)));
         }
 
-        var total = await query.CountAsync(cancellationToken);
-        var items = await query.OrderByDescending(task => task.UpdatedAt).ThenBy(task => task.Id)
-            .Skip((filter.Page - 1) * filter.PageSize).Take(filter.PageSize)
-            .Select(task => new TaskSummary(task.Id, task.Title, task.Category, task.Status, task.Priority,
-                task.DueDate, task.Assignee == null ? null : new TaskPerson(task.Assignee.Id, task.Assignee.DisplayName)))
-            .ToListAsync(cancellationToken);
-        return new(items, total, filter.Page, filter.PageSize);
+        return query;
     }
+
+    private static IOrderedQueryable<WorkTask> Ordered(IQueryable<WorkTask> query) =>
+        query.OrderByDescending(task => task.UpdatedAt).ThenBy(task => task.Id);
 
     public async Task<TaskCounts> CountsAsync(TaskActor actor, CancellationToken cancellationToken)
     {

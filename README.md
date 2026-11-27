@@ -6,6 +6,7 @@ Taskline is a .NET full-stack project for the Cohort 10 assignment by Fasiha Tar
 - Administrators see and manage all tasks, assign work across accounts, and see dashboard totals for the entire workspace.
 - Tasks support pending, in-progress, and completed statuses, three priorities, categories, due dates, and search. Search covers the title, description, and category.
 - SignalR refreshes open dashboards, task lists, and task details when visible tasks change. You can try it by opening Taskline in two windows and changing a task in one.
+- The Tasks page exports and imports a versioned JSON file. Export uses the current search and filters across all pages. Import creates new tasks assigned to the signed-in user and validates the entire file before saving.
 - The API produces structured Serilog request and activity logs. Error responses use Problem Details. Task updates and deletion require the current version to protect concurrent edits.
 - Task deletion sets `IsDeleted` and hides the task from lists, detail views, and totals. Administrators can deactivate regular users through the API. Deactivation sets `IsDeleted`, revokes access, and preserves the user's task history.
 
@@ -73,6 +74,8 @@ A browser or API client must retain cookies. Before each POST, PUT, PATCH, or DE
 | DELETE | `/api/account/users/{id}` | Soft-delete a regular user as an administrator |
 | GET | `/api/tasks` | List visible tasks with optional `search`, `status`, `priority`, `category`, `page`, and `pageSize` |
 | GET | `/api/tasks/counts` | Count visible tasks by status |
+| GET | `/api/tasks/export` | Download visible tasks matching `search`, `status`, `priority`, and `category` as JSON |
+| POST | `/api/tasks/import` | Import a JSON task file and return the number of tasks created |
 | GET | `/api/tasks/{id}` | Read task details and the current `version` |
 | POST | `/api/tasks` | Create a task |
 | PUT | `/api/tasks/{id}` | Replace editable fields using the current `version` |
@@ -80,6 +83,8 @@ A browser or API client must retain cookies. Before each POST, PUT, PATCH, or DE
 | DELETE | `/api/tasks/{id}?version=...` | Soft-delete a task using the current `version` |
 
 Task fields are `title`, `description`, `category`, `status`, `priority`, `dueDate`, and `assigneeId`. Use `yyyy-MM-dd` for due dates, `Pending`, `InProgress`, or `Completed` for status, and `Low`, `Medium`, or `High` for priority. A stale version returns HTTP 409.
+
+Task files use `{"version":1,"tasks":[{"title":"Review the report","status":"Pending","priority":"Medium"}]}`. Each file supports up to 1,000 tasks and 16 MiB. Exports omit identifiers and account assignments so the file can be imported by a different account. Importing the same file again creates another set of copies.
 
 ## Tests and code quality
 

@@ -1,7 +1,9 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using TaskManagement.Api.Auth;
 
 namespace TaskManagement.Api.Tasks;
@@ -10,7 +12,7 @@ namespace TaskManagement.Api.Tasks;
 [Authorize]
 [Route("api/tasks")]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
-public sealed class TasksController(TaskService tasks) : ControllerBase
+public sealed class TasksController(TaskService tasks, IOptions<JsonOptions> json) : ControllerBase
 {
     [HttpGet]
     public Task<TaskPage> List([FromQuery] TaskFilter filter, CancellationToken cancellationToken) =>
@@ -19,6 +21,22 @@ public sealed class TasksController(TaskService tasks) : ControllerBase
     [HttpGet("counts")]
     public Task<TaskCounts> Counts(CancellationToken cancellationToken) =>
         tasks.CountsAsync(Actor, cancellationToken);
+
+    [HttpGet("export")]
+    public async Task<IActionResult> Export([FromQuery] TaskFilter filter, CancellationToken cancellationToken)
+    {
+        var file = await tasks.ExportAsync(Actor, filter, cancellationToken);
+        return File(JsonSerializer.SerializeToUtf8Bytes(file, json.Value.JsonSerializerOptions),
+            "application/json", "taskline-tasks.json");
+    }
+
+    [HttpPost("import")]
+    [RequestSizeLimit(TaskFile.MaxBytes)]
+    public async Task<IActionResult> Import(TaskFile file, CancellationToken cancellationToken)
+    {
+        var imported = await tasks.ImportAsync(Actor, file.Tasks!, cancellationToken);
+        return Ok(new { imported });
+    }
 
     [HttpGet("{id:guid}")]
     public Task<TaskDetail> Get(Guid id, CancellationToken cancellationToken) =>
