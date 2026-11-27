@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -84,6 +85,8 @@ builder.Services.AddAntiforgery(options =>
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<TaskStore>();
 builder.Services.AddScoped<TaskService>();
+builder.Services.AddScoped<TaskUpdates>();
+builder.Services.AddSignalR();
 builder.Services.AddSingleton(TimeProvider.System);
 
 await using var app = builder.Build();
@@ -111,6 +114,11 @@ app.UseStatusCodePages();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapHub<TaskUpdatesHub>("/api/task-updates", options =>
+{
+    options.Transports = HttpTransportType.ServerSentEvents | HttpTransportType.LongPolling;
+    options.CloseOnAuthenticationExpiration = true;
+});
 app.MapGet("/api/health", () => Results.Ok(new { status = "healthy" }));
 await app.RunAsync();
 

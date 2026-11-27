@@ -6,6 +6,7 @@ import { Avatar, Brand, ErrorMessage, Loading, useResource } from './common.jsx'
 import { AccountForm, Profile } from './Account.jsx';
 import { Dashboard, TaskList } from './TaskList.jsx';
 import { TaskDetails, TaskEditor } from './TaskEditor.jsx';
+import { TaskUpdatesProvider } from './taskUpdates.jsx';
 
 const sections = [
   { to: '/', label: 'Overview', Icon: LayoutGrid },
@@ -74,7 +75,13 @@ export default function App() {
   if (session.state === 'error') return <main className="startup"><Brand /><ErrorMessage error={session.error} retry={session.retry} /></main>;
 
   const user = userOverride === undefined ? session.data : userOverride;
-  if (user) return <Workspace key={user.id} user={user} onLogout={logout} />;
+  if (user) {
+    return (
+      <TaskUpdatesProvider key={user.id}>
+        <Workspace user={user} onLogout={logout} />
+      </TaskUpdatesProvider>
+    );
+  }
 
   return (
     <Routes>

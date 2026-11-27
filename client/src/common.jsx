@@ -58,7 +58,7 @@ export function timestampLabel(value) {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
 }
 
-export function useResource(load, key) {
+export function useResource(load, key, revision = 0) {
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState({ key, attempt, state: 'loading' });
   useEffect(() => {
@@ -71,7 +71,7 @@ export function useResource(load, key) {
         if (!controller.signal.aborted) setResult({ key, attempt, state: 'error', error });
       });
     return () => controller.abort();
-  }, [load, key, attempt]);
+  }, [load, key, attempt, revision]);
   const current = result.key === key && result.attempt === attempt ? result : { state: 'loading' };
   return { ...current, retry: () => setAttempt((previous) => previous + 1) };
 }

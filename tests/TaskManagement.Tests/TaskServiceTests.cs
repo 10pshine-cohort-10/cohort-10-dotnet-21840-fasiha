@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging.Abstractions;
 using TaskManagement.Api.Data;
 using TaskManagement.Api.Tasks;
 
@@ -35,7 +34,7 @@ public sealed class TaskServiceTests(TaskApiFactory app) : IClassFixture<TaskApi
         await db.SaveChangesAsync();
 
         var store = new TaskStore(db);
-        var service = new TaskService(store, TimeProvider.System, NullLogger<TaskService>.Instance);
+        var service = scope.ServiceProvider.GetRequiredService<TaskService>();
         var adminActor = new TaskActor(admin.Id, true);
         var memberActor = new TaskActor(member.Id, false);
         var draft = new TaskInput { Title = "  Quarterly review  " };

@@ -5,6 +5,7 @@ Taskline is a .NET full-stack project for the Cohort 10 assignment by Fasiha Tar
 - Users see tasks they created or were assigned. They can manage their own tasks and change the status of tasks assigned to them.
 - Administrators see and manage all tasks, assign work across accounts, and see dashboard totals for the entire workspace.
 - Tasks support pending, in-progress, and completed statuses, three priorities, categories, due dates, and search. Search covers the title, description, and category.
+- SignalR refreshes open dashboards, task lists, and task details when visible tasks change. You can try it by opening Taskline in two windows and changing a task in one.
 - The API produces structured Serilog request and activity logs. Error responses use Problem Details. Task updates and deletion require the current version to protect concurrent edits.
 - Task deletion sets `IsDeleted` and hides the task from lists, detail views, and totals. Administrators can deactivate regular users through the API. Deactivation sets `IsDeleted`, revokes access, and preserves the user's task history.
 
@@ -34,6 +35,8 @@ npm.cmd run dev
 Open **http://localhost:5173** and create an account. Vite proxies `/api` to `http://localhost:5147`. If the API uses another address, set `TASK_API_URL` in the Vite terminal before starting the client. On macOS or Linux, use `npm` in place of `npm.cmd`.
 
 For an HTTPS deployment, run `npm ci` and `npm run build` inside `client`. Serve `client/dist` with an `index.html` fallback for client routes and route `/api/*` to the API on the same origin. Configure the API to see the request as HTTPS for secure cookies. Provide the production database connection and apply migrations as part of deployment.
+
+Keep response buffering disabled for `/api/task-updates` when your reverse proxy handles Server-Sent Events. SignalR also supports long polling on that route.
 
 ### Provision an administrator
 

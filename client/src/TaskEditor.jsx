@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 import { Pencil, Trash2 } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from './api.js';
+import { useTaskRevision } from './taskUpdates.jsx';
 import { dateLabel, ErrorMessage, Loading, priorities, PriorityPill, statuses, StatusPill, timestampLabel, useResource } from './common.jsx';
 
 function EnumOptions({ options }) {
@@ -80,7 +81,7 @@ function TaskDetailCard({ initialTask, reload }) {
 export function TaskDetails() {
   const { id } = useParams();
   const load = useCallback((signal) => api.task(id, signal), [id]);
-  const result = useResource(load, id);
+  const result = useResource(load, id, useTaskRevision());
   if (result.state === 'loading') return <Loading />;
   if (result.state === 'error') return <><Link to="/tasks" className="text-link breadcrumb">All tasks</Link><ErrorMessage error={result.error} retry={result.error.status === 404 ? undefined : result.retry} /></>;
   return <TaskDetailCard key={result.data.version} initialTask={result.data} reload={result.retry} />;

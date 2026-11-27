@@ -2,7 +2,7 @@ using TaskManagement.Api.Data;
 
 namespace TaskManagement.Api.Tasks;
 
-public sealed class TaskService(TaskStore store, TimeProvider clock, ILogger<TaskService> logger)
+public sealed class TaskService(TaskStore store, TaskUpdates updates, TimeProvider clock, ILogger<TaskService> logger)
 {
     public Task<TaskPage> ListAsync(TaskActor actor, TaskFilter filter, CancellationToken cancellationToken) =>
         store.ListAsync(actor, filter, cancellationToken);
@@ -26,6 +26,7 @@ public sealed class TaskService(TaskStore store, TimeProvider clock, ILogger<Tas
         store.Add(task);
         await store.SaveAsync(cancellationToken);
         logger.LogInformation("Account {UserId} created task {TaskId} assigned to {AssigneeId}", actor.Id, task.Id, task.AssigneeId);
+        await updates.PublishAsync(task.CreatorId, task.AssigneeId);
         return Describe(task, actor);
     }
 
@@ -38,11 +39,13 @@ public sealed class TaskService(TaskStore store, TimeProvider clock, ILogger<Tas
         if (!actor.IsAdmin && input.AssigneeId != task.AssigneeId)
             throw new TaskProblem(StatusCodes.Status403Forbidden, "Only an administrator can change a task assignment.");
 
-        var assignee = input.AssigneeId == task.AssigneeId ? task.Assignee
+        var previousAssigneeId = task.AssigneeId;
+        var assignee = input.AssigneeId == previousAssigneeId ? task.Assignee
             : input.AssigneeId is null ? null : await FindUserAsync(input.AssigneeId, cancellationToken);
         ApplyDetails(task, input, assignee, clock.GetUtcNow().UtcDateTime);
         await store.SaveAsync(cancellationToken);
         logger.LogInformation("Account {UserId} updated task {TaskId} assigned to {AssigneeId}", actor.Id, id, task.AssigneeId);
+        await updates.PublishAsync(task.CreatorId, task.AssigneeId, previousAssigneeId);
         return Describe(task, actor);
     }
 
@@ -55,6 +58,7 @@ public sealed class TaskService(TaskStore store, TimeProvider clock, ILogger<Tas
         Touch(task, clock.GetUtcNow().UtcDateTime);
         await store.SaveAsync(cancellationToken);
         logger.LogInformation("Account {UserId} changed task {TaskId} status to {Status}", actor.Id, id, task.Status);
+        await updates.PublishAsync(task.CreatorId, task.AssigneeId);
         return Describe(task, actor);
     }
 
@@ -67,6 +71,7 @@ public sealed class TaskService(TaskStore store, TimeProvider clock, ILogger<Tas
         Touch(task, clock.GetUtcNow().UtcDateTime);
         await store.SaveAsync(cancellationToken);
         logger.LogInformation("Account {UserId} soft-deleted task {TaskId}", actor.Id, id);
+        await updates.PublishAsync(task.CreatorId, task.AssigneeId);
     }
 
     private async Task<WorkTask> FindAsync(TaskActor actor, Guid id, CancellationToken cancellationToken) =>

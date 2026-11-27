@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { CheckCircle2, CircleDashed, Clock3, Plus, Search } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api } from './api.js';
+import { useTaskRevision } from './taskUpdates.jsx';
 import { Avatar, dateLabel, EmptyTasks, ErrorMessage, Loading, priorities, PriorityPill, statuses, StatusPill, useResource } from './common.jsx';
 
 const cards = [
@@ -38,7 +39,7 @@ function TaskTable({ items }) {
 const loadDashboard = (signal) => Promise.all([api.taskCounts(signal), api.tasks({ pageSize: 5 }, signal)]);
 
 export function Dashboard({ user }) {
-  const data = useResource(loadDashboard, 'dashboard');
+  const data = useResource(loadDashboard, 'dashboard', useTaskRevision());
   const isAdmin = user.roles.includes('Admin');
 
   return (
@@ -80,7 +81,7 @@ export function TaskList() {
   const filterKey = JSON.stringify([search, category, status, priority]);
   const filtered = Boolean(search || category || status || priority);
   const load = useCallback((signal) => api.tasks({ search, category, status, priority, page }, signal), [search, category, status, priority, page]);
-  const result = useResource(load, filterKey + page);
+  const result = useResource(load, filterKey + page, useTaskRevision());
   const clear = () => setParams({});
 
   function apply(event) {
